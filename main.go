@@ -39,7 +39,7 @@ func main() {
 	fmt.Printf("\nProgram exited successfully\n")
 }
 
-func writeDict(plaintextDict []string, file *os.File) {
+func writeDict(plaintextDict []string, file *os.File, waitgroup *sync.WaitGroup) {
 	if HASH_METHOD == "md5" {
 		for i := 0; i < len(plaintextDict)-1; i++ {
 			_, err := file.WriteString(hasherMD5(plaintextDict[i]))
@@ -76,17 +76,21 @@ func writeDict(plaintextDict []string, file *os.File) {
 		fmt.Printf("\nThe hash method specified does not exist. Stopping the program.\n")
 		os.Exit(-1)
 	}
+
+	waitgroup.Done()
 }
 
 func createHashDict(hashedDict string, plaintextDict []string, waitgroup *sync.WaitGroup) {
+	var writeWaitgroup sync.WaitGroup
 	fmt.Printf("Creating hashed dictionary\n")
 	file, err := os.Create(hashedDict)
 
 	if err != nil {
 		log.Fatalf("Failed creating file: %s", err)
 	}
-
-	writeDict(plaintextDict, file)
+	writeWaitgroup.Add(1)
+	go writeDict(plaintextDict, file, &writeWaitgroup)
+	writeWaitgroup.Wait()
 
 	defer file.Close()
 
